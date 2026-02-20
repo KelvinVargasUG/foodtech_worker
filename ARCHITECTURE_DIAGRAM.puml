@@ -1,0 +1,122 @@
+@startuml MessageBrokerStrategyPattern
+!theme plain
+skinparam classBackgroundColor #F3F3F3
+skinparam classBorderColor #333
+skinparam arrowColor #333
+skinparam shadowing false
+
+package "Domain" {
+    class FoodEvent {
+        - eventId: String
+        - eventType: String
+        - payload: String
+        - timestamp: LocalDateTime
+    }
+}
+
+package "Application - Ports" {
+    interface EventPublisherPort {
+        + publish(FoodEvent): void
+    }
+}
+
+package "Infrastructure - Output - Strategy" {
+    interface MessageBrokerStrategy {
+        + publish(FoodEvent): void
+        + getBrokerName(): String
+    }
+    
+    class EventPublisherAdapter {
+        - strategy: MessageBrokerStrategy
+        + publish(FoodEvent): void
+    }
+}
+
+package "Infrastructure - Output - RabbitMQ" {
+    class RabbitMqEventPublisher {
+        - rabbitTemplate: RabbitTemplate
+        - exchange: String
+        - routingKey: String
+        + publish(FoodEvent): void
+        + getBrokerName(): String
+    }
+}
+
+package "Infrastructure - Output - Kafka" {
+    class KafkaEventPublisher {
+        - kafkaTemplate: KafkaTemplate<String, Object>
+        - topic: String
+        + publish(FoodEvent): void
+        + getBrokerName(): String
+    }
+}
+
+package "Infrastructure - Config" {
+    class MessageBrokerConfig {
+        - messageBroker: String
+        + messageBrokerStrategy(): MessageBrokerStrategy
+        + eventPublisherPort(): EventPublisherPort
+    }
+}
+
+package "Application Logic" {
+    class OrderService {
+        - eventPublisherPort: EventPublisherPort
+        + processOrder(): void
+    }
+}
+
+' Relaciones
+RabbitMqEventPublisher .|> MessageBrokerStrategy
+KafkaEventPublisher .|> MessageBrokerStrategy
+EventPublisherAdapter .|> EventPublisherPort
+EventPublisherAdapter --> MessageBrokerStrategy
+MessageBrokerConfig --> RabbitMqEventPublisher
+MessageBrokerConfig --> KafkaEventPublisher
+MessageBrokerConfig --> EventPublisherAdapter
+OrderService --> EventPublisherPort
+EventPublisherPort <-- MessageBrokerConfig
+FoodEvent --> MessageBrokerStrategy
+
+' Notas
+note right of MessageBrokerStrategy
+  **Strategy Pattern Interface**
+  Define el contrato común
+  para todos los brokers
+end note
+
+note right of EventPublisherAdapter
+  **Adapter**
+  Implementa EventPublisherPort
+  Delega a la estrategia elegida
+end note
+
+note right of MessageBrokerConfig
+  **Factory + Config**
+  Selecciona estrategia según:
+  foodtech.message-broker
+  
+  Crea EventPublisherPort
+end note
+
+note right of OrderService
+  **Business Logic**
+  No conoce detalles de
+  implementación
+  
+  Solo usa EventPublisherPort
+end note
+
+note bottom of RabbitMqEventPublisher
+  Implementación para RabbitMQ
+  Usa: RabbitTemplate
+  Exchange + Routing Key
+end note
+
+note bottom of KafkaEventPublisher
+  Implementación para Kafka
+  Usa: KafkaTemplate
+  Topic + Message Key
+end note
+
+@enduml
