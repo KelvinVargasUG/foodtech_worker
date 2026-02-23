@@ -18,9 +18,8 @@ public class TestEventController {
 
     @PostMapping("/publish")
     public ResponseEntity<String> publishEvent(
-            @RequestParam(defaultValue = "TEST_EVENT") String eventType,
+            @RequestParam("eventType") String eventType,
             @RequestBody String payload) {
-        
         processEventUseCase.processAndPublish(eventType, payload);
         return ResponseEntity.ok("Event published successfully");
     }

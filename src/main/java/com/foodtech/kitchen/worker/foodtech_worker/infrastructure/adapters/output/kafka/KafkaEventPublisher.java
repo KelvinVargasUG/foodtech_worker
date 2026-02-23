@@ -1,20 +1,17 @@
 package com.foodtech.kitchen.worker.foodtech_worker.infrastructure.adapters.output.kafka;
 
-import com.foodtech.kitchen.worker.foodtech_worker.infrastructure.adapters.output.MessageBrokerStrategy;
+import com.foodtech.kitchen.worker.foodtech_worker.application.ports.output.EventPublisherPort;
 import com.foodtech.kitchen.worker.foodtech_worker.domain.model.FoodEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 @RequiredArgsConstructor
-public class KafkaEventPublisher implements MessageBrokerStrategy {
+public class KafkaEventPublisher implements EventPublisherPort {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
-
-    @Value("${foodtech.kafka.topic:foodtech-events}")
-    private String topic;
+    private final String topic;
 
     @Override
     public void publish(FoodEvent event) {
@@ -28,10 +25,5 @@ public class KafkaEventPublisher implements MessageBrokerStrategy {
                         log.error("Failed to publish event to Kafka topic: {}", topic, ex);
                     }
                 });
-    }
-
-    @Override
-    public String getBrokerName() {
-        return "kafka";
     }
 }

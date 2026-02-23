@@ -1,12 +1,10 @@
 package com.foodtech.kitchen.worker.foodtech_worker.infrastructure.adapters.output.config;
 
-import com.foodtech.kitchen.worker.foodtech_worker.infrastructure.adapters.output.MessageBrokerStrategy;
 import com.foodtech.kitchen.worker.foodtech_worker.infrastructure.adapters.output.rabbitmq.RabbitMqEventPublisher;
 import com.foodtech.kitchen.worker.foodtech_worker.infrastructure.adapters.output.kafka.KafkaEventPublisher;
 import com.foodtech.kitchen.worker.foodtech_worker.application.ports.output.EventPublisherPort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -21,70 +19,43 @@ public class MessageBrokerConfig {
     private String messageBroker;
 
     /**
-     * Factory method to select the appropriate message broker strategy
+     * Factory method to select the appropriate message broker adapter
      * based on the application configuration.
      *
      * @param kafkaTemplate Kafka template (optional, only present if Kafka is enabled)
      * @param rabbitTemplate RabbitMQ template
-     * @return The selected message broker strategy
+     * @return The selected event publisher port implementation
      */
     @Bean
-    public MessageBrokerStrategy messageBrokerStrategy(
+    public EventPublisherPort eventPublisherPort(
             Optional<KafkaTemplate<String, Object>> kafkaTemplate,
-            RabbitTemplate rabbitTemplate) {
+            RabbitTemplate rabbitTemplate,
+            @Value("${foodtech.kafka.topic:foodtech-events}") String topic,
+            @Value("${foodtech.rabbitmq.exchange}") String exchange,
+            @Value("${foodtech.rabbitmq.routingkey}") String routingKey) {
         
-        MessageBrokerStrategy strategy;
+        EventPublisherPort publisher;
         
         switch (messageBroker.toLowerCase()) {
             case "kafka":
                 log.info("Using Kafka as message broker");
                 if (kafkaTemplate.isPresent()) {
-                    strategy = new KafkaEventPublisher(kafkaTemplate.get());
+                    publisher = new KafkaEventPublisher(kafkaTemplate.get(), topic);
                 } else {
                     log.warn("Kafka selected but KafkaTemplate not available. Falling back to RabbitMQ");
-                    strategy = new RabbitMqEventPublisher(rabbitTemplate);
+                    publisher = new RabbitMqEventPublisher(rabbitTemplate, exchange, routingKey);
                 }
                 break;
             case "rabbitmq":
                 log.info("Using RabbitMQ as message broker");
-                strategy = new RabbitMqEventPublisher(rabbitTemplate);
+                publisher = new RabbitMqEventPublisher(rabbitTemplate, exchange, routingKey);
                 break;
             default:
                 log.warn("Unknown message broker: {}. Defaulting to RabbitMQ", messageBroker);
-                strategy = new RabbitMqEventPublisher(rabbitTemplate);
+                publisher = new RabbitMqEventPublisher(rabbitTemplate, exchange, routingKey);
         }
         
-        log.info("Message broker strategy initialized: {}", strategy.getBrokerName());
-        return strategy;
-    }
-
-    /**
-     * EventPublisherPort adapter that delegates to the selected strategy
-     *
-     * @param strategy The message broker strategy
-     * @return EventPublisherPort implementation
-     */
-    @Bean
-    public EventPublisherPort eventPublisherPort(MessageBrokerStrategy strategy) {
-        return new EventPublisherAdapter(strategy);
-    }
-
-    /**
-     * Adapter class that implements EventPublisherPort using the strategy pattern
-     */
-    @Slf4j
-    private static class EventPublisherAdapter implements EventPublisherPort {
-        
-        private final MessageBrokerStrategy strategy;
-
-        public EventPublisherAdapter(MessageBrokerStrategy strategy) {
-            this.strategy = strategy;
-        }
-
-        @Override
-        public void publish(com.foodtech.kitchen.worker.foodtech_worker.domain.model.FoodEvent event) {
-            log.debug("Publishing event using strategy: {}", strategy.getBrokerName());
-            strategy.publish(event);
-        }
+        log.info("Message broker adapter initialized: {}", publisher.getClass().getSimpleName());
+        return publisher;
     }
 }
