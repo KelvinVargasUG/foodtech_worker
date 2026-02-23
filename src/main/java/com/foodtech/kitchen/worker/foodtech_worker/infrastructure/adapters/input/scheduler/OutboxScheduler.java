@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -13,6 +14,7 @@ public class OutboxScheduler {
 
     private final ProcessOutboxUseCase processOutboxUseCase;
 
+    @Transactional
     @Scheduled(fixedRateString = "${foodtech.outbox.scheduler-rate:3000}")
     public void processOutbox() {
         log.debug("[Scheduler] Triggering outbox processing cycle at {}", java.time.LocalDateTime.now());

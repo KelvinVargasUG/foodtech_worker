@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -39,5 +40,15 @@ class TestEventControllerTest {
                 .andExpect(content().string("Event published successfully"));
 
         verify(processEventUseCase).processAndPublish(eq(eventType), eq(payload));
+    }
+
+    @Test
+    void publishEvent_ShouldReturnBadRequest_WhenEventTypeMissing() throws Exception {
+        mockMvc.perform(post("/api/test/publish")
+                        .content("{\"key\":\"value\"}")
+                        .contentType(MediaType.TEXT_PLAIN))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(processEventUseCase);
     }
 }

@@ -1,10 +1,9 @@
-package com.foodtech.kitchen.worker.foodtech_worker;
+package com.foodtech.kitchen.worker.foodtech_worker.infrastructure.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
@@ -17,10 +16,6 @@ import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
 )
 public class KafkaConfig {
 
-    /**
-     * ReplyingKafkaTemplate para patrón request-reply con Kafka
-     * Usa los beans autoconfigurables de Spring Boot
-     */
     @Bean
     public ReplyingKafkaTemplate<String, Object, String> replyingKafkaTemplate(
             ProducerFactory<?, ?> producerFactory,
@@ -31,10 +26,10 @@ public class KafkaConfig {
         replyContainer.getContainerProperties().setGroupId("worker-reply-group");
 
         @SuppressWarnings("unchecked")
-        ReplyingKafkaTemplate<String, Object, String> template = 
+        ReplyingKafkaTemplate<String, Object, String> template =
                 new ReplyingKafkaTemplate<>(
-                    (ProducerFactory<String, Object>) producerFactory, 
-                    (ConcurrentMessageListenerContainer<String, String>) replyContainer);
+                        (ProducerFactory<String, Object>) producerFactory,
+                        (ConcurrentMessageListenerContainer<String, String>) replyContainer);
         return template;
     }
 }

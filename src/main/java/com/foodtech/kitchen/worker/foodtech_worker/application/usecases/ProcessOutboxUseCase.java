@@ -4,27 +4,27 @@ import com.foodtech.kitchen.worker.foodtech_worker.application.ports.output.Even
 import com.foodtech.kitchen.worker.foodtech_worker.application.ports.output.OutboxRepositoryPort;
 import com.foodtech.kitchen.worker.foodtech_worker.domain.model.FoodEvent;
 import com.foodtech.kitchen.worker.foodtech_worker.domain.model.OutboxEvent;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
-@Service
-@RequiredArgsConstructor
 public class ProcessOutboxUseCase {
 
     private final OutboxRepositoryPort outboxRepositoryPort;
     private final EventPublisherPort eventPublisherPort;
+    private final int maxAttempts;
 
-    @Value("${foodtech.outbox.max-attempts:3}")
-    private int maxAttempts;
+    public ProcessOutboxUseCase(
+            OutboxRepositoryPort outboxRepositoryPort,
+            EventPublisherPort eventPublisherPort,
+            int maxAttempts) {
+        this.outboxRepositoryPort = outboxRepositoryPort;
+        this.eventPublisherPort = eventPublisherPort;
+        this.maxAttempts = maxAttempts;
+    }
 
-    @Transactional
     public void processOutboxEvents() {
         List<OutboxEvent> pendingEvents = outboxRepositoryPort.findPendingEvents(10); // Batch size 10
 

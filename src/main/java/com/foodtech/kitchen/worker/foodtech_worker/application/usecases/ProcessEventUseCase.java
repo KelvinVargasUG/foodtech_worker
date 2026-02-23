@@ -4,13 +4,11 @@ import com.foodtech.kitchen.worker.foodtech_worker.application.ports.output.Even
 import com.foodtech.kitchen.worker.foodtech_worker.domain.model.FoodEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Slf4j
-@Service
 @RequiredArgsConstructor
 public class ProcessEventUseCase {
 
