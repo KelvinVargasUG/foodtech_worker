@@ -1,9 +1,9 @@
 package com.foodtech.kitchen.worker.foodtech_worker;
 
+import com.foodtech.kitchen.worker.foodtech_worker.application.ports.output.EventPublisherPort;
 import com.foodtech.kitchen.worker.foodtech_worker.infrastructure.persistence.entity.OutboxEntity;
 import com.foodtech.kitchen.worker.foodtech_worker.infrastructure.persistence.repository.JpaOutboxRepository;
 import org.junit.jupiter.api.Test;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -15,20 +15,22 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "foodtech.message-broker=rabbitmq",
+    "foodtech.outbox.scheduler-rate=1000"
+})
 class OutboxIntegrationTest {
 
     @Autowired
     private JpaOutboxRepository jpaOutboxRepository;
 
     @MockitoBean
-    private RabbitTemplate rabbitTemplate;
+    private EventPublisherPort eventPublisherPort;
 
     @Test
-    void shouldProcessOutboxEventAndPublishToRabbitMQ() {
+    void shouldProcessOutboxEventAndPublishMessage() {
         // Arrange
         UUID eventId = UUID.randomUUID();
         OutboxEntity entity = OutboxEntity.builder()
@@ -55,6 +57,6 @@ class OutboxIntegrationTest {
         });
 
         // Assert
-        verify(rabbitTemplate).convertAndSend(eq("foodtech.exchange"), eq("foodtech.routingkey"), any(Object.class));
+        verify(eventPublisherPort).publish(any());
     }
 }
