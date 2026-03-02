@@ -1,4 +1,4 @@
-package com.foodtech.kitchen.worker.foodtech_worker;
+package com.foodtech.kitchen.worker.foodtech_worker.integration;
 
 import com.foodtech.kitchen.worker.foodtech_worker.application.ports.output.EventPublisherPort;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,6 @@ class RabbitMqIntegrationTest {
 
     @MockitoBean
     private RabbitTemplate rabbitTemplate;
-
 
     @Test
     void contextLoadsAndBeansAreCreated() {

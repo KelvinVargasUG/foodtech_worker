@@ -2,14 +2,16 @@ package com.foodtech.kitchen.worker.foodtech_worker.application.usecases;
 
 import com.foodtech.kitchen.worker.foodtech_worker.application.ports.output.EventPublisherPort;
 import com.foodtech.kitchen.worker.foodtech_worker.domain.model.FoodEvent;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.time.LocalDateTime;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -18,31 +20,48 @@ class ProcessEventUseCaseTest {
     @Mock
     private EventPublisherPort eventPublisherPort;
 
-    private ProcessEventUseCase processEventUseCase;
+    @InjectMocks
+    private ProcessEventUseCase useCase;
 
-    @BeforeEach
-    void setUp() {
-        processEventUseCase = new ProcessEventUseCase(eventPublisherPort);
+    @Test
+    void processAndPublish_happyPath_publishesEvent() {
+        // Arrange
+        String type = "ORDER_CREATED";
+        String payload = "{\"orderId\":\"123\"}";
+
+        // Act
+        useCase.processAndPublish(type, payload);
+
+        // Assert
+        ArgumentCaptor<FoodEvent> captor = ArgumentCaptor.forClass(FoodEvent.class);
+        verify(eventPublisherPort).publish(captor.capture());
+
+        FoodEvent evt = captor.getValue();
+        assertNotNull(evt.getEventId(), "eventId should be generated");
+        assertEquals(type, evt.getEventType());
+        assertEquals(payload, evt.getPayload());
+        assertNotNull(evt.getTimestamp(), "timestamp should be set");
+        assertTrue(evt.getTimestamp().isBefore(LocalDateTime.now().plusSeconds(1)));
     }
 
     @Test
-    void processAndPublish_ShouldCreateEventAndPublish() {
+    void processAndPublish_nullValues_stillPublishesWithGeneratedMeta() {
         // Arrange
-        String eventType = "TEST_TYPE";
-        String payload = "{\"data\":\"test\"}";
+        String type = null;
+        String payload = null;
 
         // Act
-        processEventUseCase.processAndPublish(eventType, payload);
+        useCase.processAndPublish(type, payload);
 
         // Assert
-        ArgumentCaptor<FoodEvent> eventCaptor = ArgumentCaptor.forClass(FoodEvent.class);
-        verify(eventPublisherPort).publish(eventCaptor.capture());
+        ArgumentCaptor<FoodEvent> captor = ArgumentCaptor.forClass(FoodEvent.class);
+        verify(eventPublisherPort).publish(captor.capture());
 
-        FoodEvent capturedEvent = eventCaptor.getValue();
-        assertThat(capturedEvent).isNotNull();
-        assertThat(capturedEvent.getEventType()).isEqualTo(eventType);
-        assertThat(capturedEvent.getPayload()).isEqualTo(payload);
-        assertThat(capturedEvent.getEventId()).isNotNull(); // UUID generated
-        assertThat(capturedEvent.getTimestamp()).isNotNull(); // Timestamp generated
+        FoodEvent evt = captor.getValue();
+        assertNotNull(evt.getEventId());
+        assertNull(evt.getEventType());
+        assertNull(evt.getPayload());
+        assertNotNull(evt.getTimestamp());
     }
 }
+
