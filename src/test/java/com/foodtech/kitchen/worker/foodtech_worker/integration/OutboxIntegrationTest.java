@@ -1,7 +1,8 @@
-package com.foodtech.kitchen.worker.foodtech_worker;
+package com.foodtech.kitchen.worker.foodtech_worker.integration;
 
 import com.foodtech.kitchen.worker.foodtech_worker.infrastructure.persistence.entity.OutboxEntity;
 import com.foodtech.kitchen.worker.foodtech_worker.infrastructure.persistence.repository.JpaOutboxRepository;
+import com.foodtech.kitchen.worker.foodtech_worker.application.usecases.ProcessOutboxUseCase;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ class OutboxIntegrationTest {
     @Autowired
     private JpaOutboxRepository jpaOutboxRepository;
 
+    @Autowired
+    private ProcessOutboxUseCase processOutboxUseCase;
+
     @MockitoBean
     private RabbitTemplate rabbitTemplate;
 
@@ -36,7 +40,18 @@ class OutboxIntegrationTest {
                 .aggregateType("ORDER")
                 .aggregateId("1001")
                 .eventType("ORDER_CREATED")
-                .payload("{\"item\":\"Burger\"}")
+                .payload("""
+                        {
+                            "total": 15,
+                            "formato": "XLSX",
+                            "emailCliente": "joel.vargas.ch@hotmail.com",
+                            "nombreCliente": "Kelvin",
+                            "listaProductos": [
+                                { "nombre": "plato fuerte", "precio": 10, "cantidad": 1 },
+                                { "nombre": "plato entrada", "precio": 5, "cantidad": 1 }
+                            ]
+                        }
+                        """)
                 .status("NEW")
                 .attempts(0)
                 .createdAt(LocalDateTime.now())
@@ -44,8 +59,8 @@ class OutboxIntegrationTest {
 
         jpaOutboxRepository.save(entity);
 
-        // Act - Scheduler runs automatically every 3s
-        // We wait for the status to change to SENT
+        // Act - invoke use case directly to avoid scheduler timing issues
+        processOutboxUseCase.processOutboxEvents();
 
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
             OutboxEntity updatedEntity = jpaOutboxRepository.findById(eventId).orElseThrow();
